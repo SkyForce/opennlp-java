@@ -12,6 +12,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 
 public class Main {
+
     public static void main(String[] args) {
         POSModel model = null;
 
@@ -26,7 +27,7 @@ public class Main {
             mlParams.put("TrainerType", "Event");
             mlParams.put("Cutoff", 5);
             String[] algo = {"MAXENT", "PERCEPTRON", "PERCEPTRON_SEQUENCE"};
-            Integer[] iters = {100, 80, 50};
+            Integer[] iters = {50, 80, 100};
 
             Tokenizer tokenizer = WhitespaceTokenizer.INSTANCE;
 
@@ -40,14 +41,14 @@ public class Main {
                     model = POSTaggerME.train("ru", sampleStream, mlParams, new POSTaggerFactory());
                     POSTaggerME tagger = new POSTaggerME(model);
                     POSSample sample;
-                    FMeasure measure = new FMeasure();
+                    Measure measure = new Measure();
                     ObjectStream<String> lineStream2 = new PlainTextByLineStream(isf2, "UTF-8");
                     ObjectStream<POSSample> sampleStream2 = new WordTagSampleStream(lineStream2);
                     while((sample = sampleStream2.read()) != null) {
                         String[] pred = tagger.tag(sample.getSentence());
-                        measure.updateScores(pred, sample.getTags());
+                        measure.update(pred, sample.getTags());
                     }
-                    System.out.println(String.format("alg %s iter %s fm %s prec %s recall %s", alg, it, measure.getFMeasure(), measure.getPrecisionScore(), measure.getRecallScore()));
+                    System.out.println(String.format("alg %s iter %s fm %s prec %s recall %s acc %s", alg, it, measure.getF1(), measure.getPrecision(), measure.getRecall(), measure.getAccuracy()));
                 }
             }
         } catch (IOException e) {
