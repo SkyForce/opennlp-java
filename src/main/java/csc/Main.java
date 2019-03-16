@@ -19,8 +19,8 @@ public class Main {
         InputStream dataIn = null;
         try {
             Charset charset = Charset.forName("UTF-8");
-            InputStreamFactory isf = new MarkableFileInputStreamFactory(new File("C:\\Users\\CX70\\Documents\\opennlp-rus\\demofile.txt"));
-            InputStreamFactory isf2 = new MarkableFileInputStreamFactory(new File("C:\\Users\\CX70\\Documents\\opennlp-rus\\demofile-test.txt"));
+            InputStreamFactory isf = new MarkableFileInputStreamFactory(new File("demofile.txt"));
+            InputStreamFactory isf2 = new MarkableFileInputStreamFactory(new File("demofile-test.txt"));
 
 
             TrainingParameters mlParams = new TrainingParameters();
