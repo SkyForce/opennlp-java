@@ -1,19 +1,121 @@
 package csc;
 
+import opennlp.tools.cmdline.CmdLineUtil;
+import opennlp.tools.cmdline.TerminateToolException;
 import opennlp.tools.doccat.DocumentCategorizer;
 import opennlp.tools.doccat.DocumentCategorizerME;
+import opennlp.tools.lemmatizer.*;
 import opennlp.tools.postag.*;
 import opennlp.tools.tokenize.Tokenizer;
 import opennlp.tools.tokenize.WhitespaceTokenizer;
 import opennlp.tools.util.*;
 import opennlp.tools.util.eval.FMeasure;
+import opennlp.tools.util.model.ModelUtil;
 
 import java.io.*;
 import java.nio.charset.Charset;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main3(String[] args) {
+        TrainingParameters mlParams = new TrainingParameters();
+        mlParams.put("Iterations", 10);
+
+        InputStreamFactory inputStreamFactory = null;
+        try {
+            inputStreamFactory = new MarkableFileInputStreamFactory(
+                    new File("C:\\Users\\CX70\\Documents\\opennlp-rus\\train-lemma.txt"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        ObjectStream<String> lineStream = null;
+        LemmaSampleStream lemmaStream = null;
+        try {
+            lineStream = new PlainTextByLineStream(
+                    (inputStreamFactory), "UTF-8");
+            lemmaStream = new LemmaSampleStream(lineStream);
+        } catch (IOException e) {
+            CmdLineUtil.handleCreateObjectStreamError(e);
+        }
+
+        LemmatizerModel model;
+        try {
+            LemmatizerFactory lemmatizerFactory = LemmatizerFactory
+                    .create(null);
+            model = LemmatizerME.train("ru", lemmaStream, mlParams,
+                    lemmatizerFactory);
+        } catch (IOException e) {
+            throw new TerminateToolException(-1,
+                    "IO error while reading training data or indexing data: "
+                            + e.getMessage(),
+                    e);
+        } finally {
+            try {
+                lemmaStream.close();
+            } catch (IOException e) {
+            }
+        }
+        OutputStream modelOut = null;
+        try {
+            modelOut = new BufferedOutputStream(new FileOutputStream("trained-lemma.bin"));
+            model.serialize(modelOut);
+        } catch (IOException e) {
+            // Failed to save model
+            e.printStackTrace();
+        } finally {
+            if (modelOut != null) {
+                try {
+                    modelOut.close();
+                } catch (IOException e) {
+                    // Failed to correctly save model.
+                    // Written model might be invalid.
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        InputStreamFactory inputStreamFactory = null;
+        try {
+            inputStreamFactory = new MarkableFileInputStreamFactory(
+                    new File("C:\\Users\\CX70\\Documents\\opennlp-rus\\test-lemma.txt"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        ObjectStream<String> lineStream = null;
+        LemmaSampleStream lemmaStream = null;
+        try {
+            lineStream = new PlainTextByLineStream(
+                    (inputStreamFactory), "UTF-8");
+            lemmaStream = new LemmaSampleStream(lineStream);
+        } catch (IOException e) {
+            CmdLineUtil.handleCreateObjectStreamError(e);
+        }
+
+        LemmatizerModel model;
+        int overall = 0, correct = 0;
+        try (InputStream modelIn = new FileInputStream("trained-lemma.bin")) {
+            model = new LemmatizerModel(modelIn);
+        }
+        LemmatizerME lemmatizer = new LemmatizerME(model);
+        LemmaSample samp = null;
+        while((samp = lemmaStream.read()) != null) {
+            try {
+                String[] res = lemmatizer.lemmatize(samp.getTokens(), samp.getTags());
+                if (res[0].equals(samp.getLemmas()[0])) {
+                    correct++;
+                }
+
+            }
+            catch(Exception e) {overall++;}
+        }
+        System.out.println(correct);
+        System.out.println(overall);
+    }
+
+    public static void main2(String[] args) {
         POSModel model = null;
 
         InputStream dataIn = null;
@@ -26,8 +128,8 @@ public class Main {
             TrainingParameters mlParams = new TrainingParameters();
             mlParams.put("TrainerType", "Event");
             mlParams.put("Cutoff", 5);
-            String[] algo = {"MAXENT", "PERCEPTRON", "PERCEPTRON_SEQUENCE"};
-            Integer[] iters = {50, 80, 100};
+            String[] algo = {"MAXENT"};
+            Integer[] iters = {500};
 
             Tokenizer tokenizer = WhitespaceTokenizer.INSTANCE;
 
